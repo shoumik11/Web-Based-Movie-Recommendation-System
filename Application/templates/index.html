@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommendation System</title>
+    <style>
+        select{
+            margin : 2%;
+            padding : 2%;
+            border : 2px solid balck;
+            font-size: x-large;
+            width: 75%;
+        }
+        button{
+            box-shadow: 1px 1px 5px 1px black;
+            font-size: -webkit-xxx-large;
+            text-align: justify;
+            color: #9100ff;
+            margin: 2%;
+            padding: 1%;
+        }
+    </style>
+    <Script>
+        let storage = {}
+        let stored = []
+        function store(){
+            const value = document.getElementById("moviesSelection").value
+            console.log(value,storage[value])
+            const row = storage[value]
+            if(row){
+                const data = row
+                if(stored.filter(row => row[0] === data[0]).length === 0){
+                    stored.push(data)
+                    // console.log(data)
+                    const tr = document.createElement("tr")
+
+                    let td = document.createElement("td")
+                    td.innerText = data[0]
+                    tr.appendChild(td)
+                    td = document.createElement("td")
+                    td.innerText = data[1]
+                    tr.appendChild(td)
+                    td = document.createElement("td")
+                    td.innerText = data[2]
+                    tr.appendChild(td)
+
+                    document.getElementById("container").appendChild(tr)
+                }
+            }
+        }
+        function recommendations(){
+            const options = {
+                method: 'POST',
+                body: JSON.stringify(stored),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+            fetch("/recommend",options)
+            .then(res => res.text())
+            .then(res => {
+                const output = res.split("\n")
+                document.getElementById("output").innerHTML = ""
+                output.map(title => {
+                    const div = document.createElement("li")
+                    div.innerText = title
+
+                    document.getElementById("output").appendChild(div)
+                })
+            })
+            .catch(err => console.log(err))
+        }
+    </Script>
+</head>
+<body>
+    <div>
+        <select id="moviesSelection">
+            <script>
+                const titles = []
+                fetch("/static/movies.csv")
+                .then(res => res.text())
+                .then(res => {
+                    let data = res.split("\n")
+                    data = data.filter(row => {
+                        const data = row.split(",")
+                        if(data[0] != "movieId" && data[1])
+                            return true
+                        return false
+                    }).map(row => {
+                        let data = row.split("\"").join("").split("\'").join("").split("\r")[0].split(",")
+                        // console.log(data)
+                        if(data.length > 3){
+                            const x = row.split(",")[0]
+                            const y = row.split(",").slice(-1)[0]
+                            const z = row.replace(x+",","").replace(","+y,"").split("\"").join("").split("\'").join("")
+                            // console.log(x,z,y)
+                            data = [x,z,y]
+                        }
+                        titles.push(data[1])
+                        storage[data[1]] = data
+                        return data
+                    })
+                    titles.sort()
+                    titles.map(title => {
+                        let data = storage[title]
+                        
+                        const option = document.createElement("option")
+                        option.value = data[1]
+                        option.innerText = data[1]
+                        document.getElementById("moviesSelection").appendChild(option)
+                        
+                    })
+                    // console.log(data)
+                })
+                .catch(err => console.log(err));
+            </script>
+        </select>
+        <button onclick="store()">
+            ADD
+        </button>
+    </div>
+    <div>
+        <h1>PREVIOUSLY WATCHED!!</h1>
+        <table border="1" width="100%">
+            <thead>
+                <tr>
+                    <th>Movie Id</th>
+                    <th>Title</th>
+                    <th>Genres</th>
+                </tr>
+            </thead>
+            <tbody id="container">
+
+            </tbody>
+        </table>
+        <button onclick="recommendations()">
+            GET RECOMMENDATIONS
+        </button>
+    </div>
+
+    <ul style="border: 10px solid #9100ff;padding: 3%;">
+        <h1>NEXT TO WATCH!!</h1>
+        <ul id="output" style="
+            border: 5px solid rebeccapurple;
+            padding: 2%">
+        </ul>
+    </div>
+</body>
+</html>
